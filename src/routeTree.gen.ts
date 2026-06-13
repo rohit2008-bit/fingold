@@ -13,6 +13,7 @@ import { Route as SovereignGoldBondsGuideRouteImport } from './routes/sovereign-
 import { Route as SipCalculatorRouteImport } from './routes/sip-calculator'
 import { Route as LumpsumCalculatorRouteImport } from './routes/lumpsum-calculator'
 import { Route as GoldEtfsRouteImport } from './routes/gold-etfs'
+import { Route as GoldAndInflationRouteImport } from './routes/gold-and-inflation'
 import { Route as DigitalVsPhysicalGoldRouteImport } from './routes/digital-vs-physical-gold'
 import { Route as BeginnersGuideRouteImport } from './routes/beginners-guide'
 import { Route as IndexRouteImport } from './routes/index'
@@ -37,6 +38,11 @@ const GoldEtfsRoute = GoldEtfsRouteImport.update({
   path: '/gold-etfs',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GoldAndInflationRoute = GoldAndInflationRouteImport.update({
+  id: '/gold-and-inflation',
+  path: '/gold-and-inflation',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DigitalVsPhysicalGoldRoute = DigitalVsPhysicalGoldRouteImport.update({
   id: '/digital-vs-physical-gold',
   path: '/digital-vs-physical-gold',
@@ -57,6 +63,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/beginners-guide': typeof BeginnersGuideRoute
   '/digital-vs-physical-gold': typeof DigitalVsPhysicalGoldRoute
+  '/gold-and-inflation': typeof GoldAndInflationRoute
   '/gold-etfs': typeof GoldEtfsRoute
   '/lumpsum-calculator': typeof LumpsumCalculatorRoute
   '/sip-calculator': typeof SipCalculatorRoute
@@ -66,6 +73,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/beginners-guide': typeof BeginnersGuideRoute
   '/digital-vs-physical-gold': typeof DigitalVsPhysicalGoldRoute
+  '/gold-and-inflation': typeof GoldAndInflationRoute
   '/gold-etfs': typeof GoldEtfsRoute
   '/lumpsum-calculator': typeof LumpsumCalculatorRoute
   '/sip-calculator': typeof SipCalculatorRoute
@@ -76,6 +84,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/beginners-guide': typeof BeginnersGuideRoute
   '/digital-vs-physical-gold': typeof DigitalVsPhysicalGoldRoute
+  '/gold-and-inflation': typeof GoldAndInflationRoute
   '/gold-etfs': typeof GoldEtfsRoute
   '/lumpsum-calculator': typeof LumpsumCalculatorRoute
   '/sip-calculator': typeof SipCalculatorRoute
@@ -87,6 +96,7 @@ export interface FileRouteTypes {
     | '/'
     | '/beginners-guide'
     | '/digital-vs-physical-gold'
+    | '/gold-and-inflation'
     | '/gold-etfs'
     | '/lumpsum-calculator'
     | '/sip-calculator'
@@ -96,6 +106,7 @@ export interface FileRouteTypes {
     | '/'
     | '/beginners-guide'
     | '/digital-vs-physical-gold'
+    | '/gold-and-inflation'
     | '/gold-etfs'
     | '/lumpsum-calculator'
     | '/sip-calculator'
@@ -105,6 +116,7 @@ export interface FileRouteTypes {
     | '/'
     | '/beginners-guide'
     | '/digital-vs-physical-gold'
+    | '/gold-and-inflation'
     | '/gold-etfs'
     | '/lumpsum-calculator'
     | '/sip-calculator'
@@ -115,6 +127,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BeginnersGuideRoute: typeof BeginnersGuideRoute
   DigitalVsPhysicalGoldRoute: typeof DigitalVsPhysicalGoldRoute
+  GoldAndInflationRoute: typeof GoldAndInflationRoute
   GoldEtfsRoute: typeof GoldEtfsRoute
   LumpsumCalculatorRoute: typeof LumpsumCalculatorRoute
   SipCalculatorRoute: typeof SipCalculatorRoute
@@ -151,6 +164,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GoldEtfsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/gold-and-inflation': {
+      id: '/gold-and-inflation'
+      path: '/gold-and-inflation'
+      fullPath: '/gold-and-inflation'
+      preLoaderRoute: typeof GoldAndInflationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/digital-vs-physical-gold': {
       id: '/digital-vs-physical-gold'
       path: '/digital-vs-physical-gold'
@@ -179,6 +199,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BeginnersGuideRoute: BeginnersGuideRoute,
   DigitalVsPhysicalGoldRoute: DigitalVsPhysicalGoldRoute,
+  GoldAndInflationRoute: GoldAndInflationRoute,
   GoldEtfsRoute: GoldEtfsRoute,
   LumpsumCalculatorRoute: LumpsumCalculatorRoute,
   SipCalculatorRoute: SipCalculatorRoute,

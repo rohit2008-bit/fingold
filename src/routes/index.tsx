@@ -105,7 +105,7 @@ const learn = [
   { tag: "Compare", title: "Digital Gold vs Physical Gold", desc: "Which form fits your goals best?", href: "/digital-vs-physical-gold" },
   { tag: "Markets", title: "Gold ETFs Explained", desc: "How exchange-traded gold works.", href: "/gold-etfs" },
   { tag: "Bonds", title: "Sovereign Gold Bonds Guide", desc: "Earn interest while owning gold.", href: "/sovereign-gold-bonds-guide" },
-  { tag: "Macro", title: "Gold and Inflation", desc: "Why gold shines when currencies weaken." },
+  { tag: "Macro", title: "Gold and Inflation", desc: "Why gold shines when currencies weaken.", href: "/gold-and-inflation" },
   { tag: "Tax", title: "Gold Investment Taxation", desc: "A clear breakdown across instruments." },
 ];
 
