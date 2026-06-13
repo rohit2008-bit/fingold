@@ -38,9 +38,8 @@ export function Nav() {
             ))}
           </ul>
 
-          {/* Desktop CTA Button */}
           <div className="hidden md:block">
-            <a href="#cta" className="btn-gold btn-gold-hover btn-shine rounded-full px-5 py-2.5 text-sm font-semibold inline-flex items-center justify-center">
+            <a href="#cta" className="btn-gold btn-gold-hover rounded-full px-5 py-2.5 text-sm font-semibold">
               Start Investing
             </a>
           </div>
@@ -74,7 +73,7 @@ export function Nav() {
                 <a
                   href="#cta"
                   onClick={() => setIsOpen(false)}
-                  className="btn-gold btn-gold-hover btn-shine rounded-2xl w-full py-3 text-sm font-semibold flex items-center justify-center"
+                  className="btn-gold btn-gold-hover rounded-2xl w-full py-3 text-sm font-semibold flex items-center justify-center"
                 >
                   Start Investing
                 </a>

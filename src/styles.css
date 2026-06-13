@@ -131,9 +131,6 @@
 }
 
 @utility btn-gold {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   background: var(--gradient-gold);
   color: #1B1B1B;
   border: 1px solid rgba(255, 220, 120, 0.5);
@@ -150,17 +147,7 @@
   }
 }
 
-@utility btn-shine {
-  &::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.55) 50%, transparent 70%);
-    transform: translateX(-120%);
-    transition: transform .9s ease;
-  }
-  &:hover::after { transform: translateX(120%); }
-}
+
 
 @utility card-lift {
   transition: transform .4s cubic-bezier(.2,.8,.2,1), box-shadow .4s ease;

@@ -104,7 +104,7 @@ const learn = [
   { tag: "Beginner", title: "Beginner's Guide to Gold Investing", desc: "Start your first gold investment with confidence.", href: "/beginners-guide" },
   { tag: "Compare", title: "Digital Gold vs Physical Gold", desc: "Which form fits your goals best?", href: "/digital-vs-physical-gold" },
   { tag: "Markets", title: "Gold ETFs Explained", desc: "How exchange-traded gold works." },
-  { tag: "Bonds", title: "Sovereign Gold Bonds Guide", desc: "Earn interest while owning gold." },
+  { tag: "Bonds", title: "Sovereign Gold Bonds Guide", desc: "Earn interest while owning gold.", href: "/sovereign-gold-bonds-guide" },
   { tag: "Macro", title: "Gold and Inflation", desc: "Why gold shines when currencies weaken." },
   { tag: "Tax", title: "Gold Investment Taxation", desc: "A clear breakdown across instruments." },
 ];
@@ -177,7 +177,7 @@ function Home() {
                   Buy, save, grow and redeem gold — with the precision of private banking.
                 </p>
                 <div className="flex flex-wrap items-center gap-4">
-                  <a href="#cta" className="btn-gold btn-gold-hover btn-shine inline-flex items-center gap-2 rounded-full px-7 py-3.5 text-sm font-semibold">
+                  <a href="#cta" className="btn-gold btn-gold-hover inline-flex items-center gap-2 rounded-full px-7 py-3.5 text-sm font-semibold">
                     Start Investing <ArrowRight className="h-4 w-4" />
                   </a>
                   <a href="#options" className="inline-flex items-center gap-2 rounded-full border border-foreground/20 px-7 py-3.5 text-sm font-semibold text-foreground transition-colors hover:border-foreground/60">
@@ -525,7 +525,7 @@ function Home() {
                 Invest smart. Invest in gold. Invest with Fingold.
               </p>
               <div className="relative mt-10 flex flex-wrap justify-center gap-4">
-                <a href="mailto:info@gallantventures.in" className="btn-gold btn-gold-hover btn-shine inline-flex items-center gap-2 rounded-full px-8 py-4 text-sm font-semibold">
+                <a href="mailto:info@gallantventures.in" className="btn-gold btn-gold-hover inline-flex items-center gap-2 rounded-full px-8 py-4 text-sm font-semibold">
                   Start Investing <ArrowRight className="h-4 w-4" />
                 </a>
                 <a href="#footer" className="inline-flex items-center gap-2 rounded-full border border-white/25 px-8 py-4 text-sm font-semibold text-white transition hover:bg-white/10">

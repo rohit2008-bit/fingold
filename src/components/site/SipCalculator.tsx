@@ -409,7 +409,7 @@ export function SipCalculator() {
             </div>
 
             {/* CTA Button styled to match brand primary gold action buttons */}
-            <button className="w-full btn-gold btn-gold-hover btn-shine py-4 px-6 rounded-2xl font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer">
+            <button className="w-full btn-gold btn-gold-hover py-4 px-6 rounded-2xl font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer">
               Start Your Digital Gold SIP
               <ArrowRight className="h-4 w-4" />
             </button>

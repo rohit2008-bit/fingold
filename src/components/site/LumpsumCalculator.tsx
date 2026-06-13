@@ -237,7 +237,7 @@ export function LumpsumCalculator() {
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 pt-4">
               <button
                 onClick={handleCalculate}
-                className="flex-1 btn-gold btn-gold-hover btn-shine py-4 px-6 rounded-2xl font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer text-base"
+                className="flex-1 btn-gold btn-gold-hover py-4 px-6 rounded-2xl font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer text-base"
               >
                 Calculate
                 <ArrowRight className="h-4 w-4" />

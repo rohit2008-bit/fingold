@@ -319,7 +319,7 @@ function BeginnersGuidePage() {
                 Put the principles into action. Build your safe-haven buffer starting from just ₹100.
               </p>
               <div className="mt-8 flex justify-center gap-4 flex-wrap">
-                <Link to="/sip-calculator" className="btn-gold btn-gold-hover btn-shine inline-flex items-center gap-2 rounded-full px-6 py-3 text-xs font-semibold">
+                <Link to="/sip-calculator" className="btn-gold btn-gold-hover inline-flex items-center gap-2 rounded-full px-6 py-3 text-xs font-semibold">
                   Try SIP Calculator <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
                 <a href="mailto:info@gallantventures.in" className="inline-flex items-center gap-2 rounded-full border border-white/25 px-6 py-3 text-xs font-semibold text-white hover:bg-white/10 transition-colors">
@@ -334,8 +334,8 @@ function BeginnersGuidePage() {
       {/* FOOTER */}
       <footer id="footer" className="hairline-t pt-16 pb-10">
         <div className="mx-auto max-w-7xl px-4">
-          <div className="grid gap-12 lg:grid-cols-4">
-            <div className="lg:col-span-2">
+          <div className="grid gap-12 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="sm:col-span-2 lg:col-span-2">
               <div className="flex items-center gap-2">
                 <span className="grid h-10 w-10 place-items-center rounded-full" style={{ background: "var(--gradient-gold)" }}>
                   <span className="font-display text-base font-bold text-[#1B1B1B]">F</span>

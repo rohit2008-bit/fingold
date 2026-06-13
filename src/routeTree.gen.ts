@@ -9,12 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SovereignGoldBondsGuideRouteImport } from './routes/sovereign-gold-bonds-guide'
 import { Route as SipCalculatorRouteImport } from './routes/sip-calculator'
 import { Route as LumpsumCalculatorRouteImport } from './routes/lumpsum-calculator'
 import { Route as DigitalVsPhysicalGoldRouteImport } from './routes/digital-vs-physical-gold'
 import { Route as BeginnersGuideRouteImport } from './routes/beginners-guide'
 import { Route as IndexRouteImport } from './routes/index'
 
+const SovereignGoldBondsGuideRoute = SovereignGoldBondsGuideRouteImport.update({
+  id: '/sovereign-gold-bonds-guide',
+  path: '/sovereign-gold-bonds-guide',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SipCalculatorRoute = SipCalculatorRouteImport.update({
   id: '/sip-calculator',
   path: '/sip-calculator',
@@ -47,6 +53,7 @@ export interface FileRoutesByFullPath {
   '/digital-vs-physical-gold': typeof DigitalVsPhysicalGoldRoute
   '/lumpsum-calculator': typeof LumpsumCalculatorRoute
   '/sip-calculator': typeof SipCalculatorRoute
+  '/sovereign-gold-bonds-guide': typeof SovereignGoldBondsGuideRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +61,7 @@ export interface FileRoutesByTo {
   '/digital-vs-physical-gold': typeof DigitalVsPhysicalGoldRoute
   '/lumpsum-calculator': typeof LumpsumCalculatorRoute
   '/sip-calculator': typeof SipCalculatorRoute
+  '/sovereign-gold-bonds-guide': typeof SovereignGoldBondsGuideRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,6 +70,7 @@ export interface FileRoutesById {
   '/digital-vs-physical-gold': typeof DigitalVsPhysicalGoldRoute
   '/lumpsum-calculator': typeof LumpsumCalculatorRoute
   '/sip-calculator': typeof SipCalculatorRoute
+  '/sovereign-gold-bonds-guide': typeof SovereignGoldBondsGuideRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -71,6 +80,7 @@ export interface FileRouteTypes {
     | '/digital-vs-physical-gold'
     | '/lumpsum-calculator'
     | '/sip-calculator'
+    | '/sovereign-gold-bonds-guide'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -78,6 +88,7 @@ export interface FileRouteTypes {
     | '/digital-vs-physical-gold'
     | '/lumpsum-calculator'
     | '/sip-calculator'
+    | '/sovereign-gold-bonds-guide'
   id:
     | '__root__'
     | '/'
@@ -85,6 +96,7 @@ export interface FileRouteTypes {
     | '/digital-vs-physical-gold'
     | '/lumpsum-calculator'
     | '/sip-calculator'
+    | '/sovereign-gold-bonds-guide'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -93,10 +105,18 @@ export interface RootRouteChildren {
   DigitalVsPhysicalGoldRoute: typeof DigitalVsPhysicalGoldRoute
   LumpsumCalculatorRoute: typeof LumpsumCalculatorRoute
   SipCalculatorRoute: typeof SipCalculatorRoute
+  SovereignGoldBondsGuideRoute: typeof SovereignGoldBondsGuideRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sovereign-gold-bonds-guide': {
+      id: '/sovereign-gold-bonds-guide'
+      path: '/sovereign-gold-bonds-guide'
+      fullPath: '/sovereign-gold-bonds-guide'
+      preLoaderRoute: typeof SovereignGoldBondsGuideRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sip-calculator': {
       id: '/sip-calculator'
       path: '/sip-calculator'
@@ -141,6 +161,7 @@ const rootRouteChildren: RootRouteChildren = {
   DigitalVsPhysicalGoldRoute: DigitalVsPhysicalGoldRoute,
   LumpsumCalculatorRoute: LumpsumCalculatorRoute,
   SipCalculatorRoute: SipCalculatorRoute,
+  SovereignGoldBondsGuideRoute: SovereignGoldBondsGuideRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
