@@ -1,10 +1,8 @@
 import { useState, useEffect } from "react";
 import {
   X,
-  Mail,
   User,
   Calendar,
-  Lock,
   Phone,
   CheckCircle2,
   ChevronRight,
@@ -16,79 +14,107 @@ import { toast } from "sonner";
 
 export function AuthModal() {
   const [isOpen, setIsOpen] = useState(false);
-  const [mode, setMode] = useState<"login" | "register">("register");
+  const [mode, setMode] = useState<"authenticate" | "profile">("authenticate");
 
   // Flow steps:
-  // 1: Form (Login/Register)
-  // 2: Email OTP Verification (if signup requires verification)
-  // 3: Success
+  // 1: OAuth Authentication Choice (Google Sign-In)
+  // 2: Complete Profile Form
+  // 3: Success Screen
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSimulated, setIsSimulated] = useState(false);
 
-  // Form values
+  // Form values for step 2 (Profile Form)
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [dob, setDob] = useState("");
   const [gender, setGender] = useState("");
-  const [emailOtp, setEmailOtp] = useState("");
+
+  const checkProfileCompleteness = async (user: {
+    id: string;
+    email?: string;
+    user_metadata?: { full_name?: string };
+  }) => {
+    try {
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (profileError && profileError.code !== "PGRST116") {
+        console.error("Error fetching profile:", profileError);
+        return;
+      }
+
+      // If profile doesn't exist or is missing required fields: name, date_of_birth, gender, or phone
+      if (
+        !profile ||
+        !profile.name ||
+        !profile.date_of_birth ||
+        !profile.gender ||
+        !profile.phone
+      ) {
+        setName(profile?.name || user.user_metadata?.full_name || "");
+        setEmail(profile?.email || user.email || "");
+        setPhoneNumber(profile?.phone?.replace("+91", "") || "");
+        setDob(profile?.date_of_birth || "");
+        setGender(profile?.gender || "");
+
+        // Transition directly to the Profile Form step
+        setMode("profile");
+        setStep(2);
+        setIsOpen(true);
+      }
+    } catch (err) {
+      console.error("Error checking profile completeness:", err);
+    }
+  };
 
   useEffect(() => {
-    const handleOpen = (e: Event) => {
-      const customEvent = e as CustomEvent<{ mode?: "login" | "register" }>;
-      setMode(customEvent.detail?.mode || "register");
-      setStep(1);
-      setError(null);
-      setName("");
-      setEmail("");
-      setPassword("");
-      setPhoneNumber("");
-      setDob("");
-      setGender("");
-      setEmailOtp("");
-      setIsOpen(true);
+    // Initial check if there's already a logged in user
+    const checkUser = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session?.user) {
+        await checkProfileCompleteness(session.user);
+      }
+    };
+    checkUser();
+
+    // Listen to custom "open-auth" events triggered by buttons
+    const handleOpen = async (e: Event) => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session?.user) {
+        await checkProfileCompleteness(session.user);
+      } else {
+        setMode("authenticate");
+        setStep(1);
+        setError(null);
+        setIsSimulated(false);
+        setName("");
+        setEmail("");
+        setPhoneNumber("");
+        setDob("");
+        setGender("");
+        setIsOpen(true);
+      }
     };
 
     window.addEventListener("open-auth", handleOpen);
 
-    // Listen for auth state changes (e.g. user clicked confirmation link in email)
+    // Listen for auth state changes (e.g. user clicked Google redirect link)
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
-        const pending = localStorage.getItem("pending_profile");
-        if (pending) {
-          try {
-            const profileData = JSON.parse(pending);
-            const { error: profileError } = await supabase
-              .from("profiles")
-              .update({
-                name: profileData.name,
-                date_of_birth: profileData.dob,
-                gender: profileData.gender,
-                phone: profileData.phone,
-                updated_at: new Date().toISOString(),
-              })
-              .eq("id", session.user.id);
-
-            if (profileError) {
-              console.error("Error updating profile from pending storage:", profileError);
-            } else {
-              toast.success(`Welcome to Fingold, ${profileData.name}! Account verified.`);
-            }
-          } catch (e) {
-            console.error("Error parsing pending profile:", e);
-          } finally {
-            localStorage.removeItem("pending_profile");
-            // Reload page after a short delay to reflect logged-in state in UI
-            setTimeout(() => {
-              window.location.reload();
-            }, 1500);
-          }
-        }
+        await checkProfileCompleteness(session.user);
       }
     });
 
@@ -102,10 +128,47 @@ export function AuthModal() {
     setIsOpen(false);
   };
 
-  // Register Handler
-  const handleRegister = async (e: React.FormEvent) => {
+  // Google OAuth Sign-In handler
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+
+      if (oauthError) {
+        throw oauthError;
+      }
+    } catch (err: unknown) {
+      console.error("Google OAuth Error:", err);
+      const errMessage = err instanceof Error ? err.message : String(err);
+      setError(errMessage || "Failed to initiate Google Sign-In.");
+      setLoading(false);
+    }
+  };
+
+  // Developer simulation handler (For testing onboarding flow on localhost)
+  const handleSimulateGoogleSignIn = () => {
+    setIsSimulated(true);
+    setName("John Doe");
+    setEmail("johndoe@gmail.com");
+    setPhoneNumber("9876543210");
+    setDob("1995-01-01");
+    setGender("male");
+
+    toast.success("Simulation session created as John Doe");
+    setMode("profile");
+    setStep(2);
+  };
+
+  // Profile Save handler
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email || !password || !phoneNumber || !dob || !gender) {
+    if (!name || !email || !dob || !gender || !phoneNumber) {
       setError("All fields are required.");
       return;
     }
@@ -114,121 +177,20 @@ export function AuthModal() {
     setError(null);
 
     try {
-      // 1. Sign up user in Supabase auth
-      const { data, error: signupError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: window.location.origin,
-          data: {
-            name,
-            phone: `+91${phoneNumber}`,
-            date_of_birth: dob,
-            gender,
-          },
-        },
-      });
-
-      if (signupError) {
-        throw signupError;
-      }
-
-      const user = data.user;
-      if (!user) {
-        throw new Error("Sign up completed but no user returned.");
-      }
-
-      // Store pending profile details in localStorage in case they use email link confirmation
-      localStorage.setItem(
-        "pending_profile",
-        JSON.stringify({
-          name,
-          dob,
-          gender,
-          phone: `+91${phoneNumber}`,
-        }),
-      );
-
-      // Check if session exists immediately (email confirmation disabled in Supabase)
-      if (data.session) {
-        // Update user profile immediately in database
-        const { error: profileError } = await supabase
-          .from("profiles")
-          .update({
-            name,
-            date_of_birth: dob,
-            gender,
-            phone: `+91${phoneNumber}`,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", user.id);
-
-        if (profileError) {
-          console.error("Profile update error:", profileError);
-        }
-
-        localStorage.removeItem("pending_profile");
-        toast.success("Registration successful!");
+      if (isSimulated) {
+        toast.success("[Simulated] Profile saved successfully!");
         setStep(3); // Success
-      } else {
-        // Session is null -> Email verification is required
-        toast.success("Account created! Please verify your email.");
-        setStep(2); // Go to email OTP verification
-      }
-    } catch (err: unknown) {
-      console.error("Registration Error:", err);
-      const errMessage = err instanceof Error ? err.message : String(err);
-      // Fallback for simulation on localhost
-      if (window.location.hostname === "localhost") {
-        toast.info(
-          "SMTP provider not configured. Entering Developer Simulation Mode (Use code 123456 to verify).",
-        );
-        setStep(2);
-      } else {
-        setError(errMessage || "Failed to sign up. Please try again.");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Verify Email OTP Handler
-  const handleVerifyEmail = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (emailOtp.length !== 6) {
-      setError("Please enter a 6-digit verification code.");
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      // If we are in simulation mode
-      if (window.location.hostname === "localhost" && emailOtp === "123456") {
-        toast.success("[Simulated] Registration completed successfully!");
-        setStep(3); // Success
-        setLoading(false);
         return;
       }
 
-      // Call verifyOtp
-      const { data, error: verifyError } = await supabase.auth.verifyOtp({
-        email: email,
-        token: emailOtp,
-        type: "signup",
-      });
-
-      if (verifyError) {
-        throw verifyError;
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session?.user) {
+        throw new Error("No active session found. Please sign in again.");
       }
 
-      const user = data.user;
-      if (!user) {
-        throw new Error("Verification succeeded but user is not logged in.");
-      }
-
-      // Update the profiles table
+      // Update user profile details in database
       const { error: profileError } = await supabase
         .from("profiles")
         .update({
@@ -238,61 +200,18 @@ export function AuthModal() {
           phone: `+91${phoneNumber}`,
           updated_at: new Date().toISOString(),
         })
-        .eq("id", user.id);
+        .eq("id", session.user.id);
 
       if (profileError) {
-        console.error("Profile update error:", profileError);
+        throw profileError;
       }
 
-      toast.success("Email verified successfully!");
+      toast.success("Profile saved successfully!");
       setStep(3); // Success
     } catch (err: unknown) {
-      console.error("Email Verification Error:", err);
+      console.error("Save Profile Error:", err);
       const errMessage = err instanceof Error ? err.message : String(err);
-      if (window.location.hostname === "localhost" && emailOtp === "123456") {
-        toast.success("[Simulated] Email verified successfully!");
-        setStep(3);
-      } else {
-        setError(errMessage || "Invalid verification code. Please try again.");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Login Handler
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password) {
-      setError("Please enter both email and password.");
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const { error: loginError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (loginError) {
-        throw loginError;
-      }
-
-      toast.success("Welcome back!");
-      setStep(3); // Success
-    } catch (err: unknown) {
-      console.error("Login Error:", err);
-      const errMessage = err instanceof Error ? err.message : String(err);
-      // Fallback for simulation on localhost
-      if (window.location.hostname === "localhost" && password === "123456") {
-        toast.success("[Simulated] Welcome back!");
-        setStep(3);
-      } else {
-        setError(errMessage || "Failed to log in. Please check your credentials.");
-      }
+      setError(errMessage || "Failed to save profile. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -314,7 +233,7 @@ export function AuthModal() {
       />
 
       {/* Modal Dialog */}
-      <div className="glass-dark relative z-10 w-full max-w-lg overflow-hidden p-8 animate-reveal text-white">
+      <div className="glass-dark relative z-10 w-full max-w-md overflow-hidden p-8 animate-reveal text-white">
         {/* Close Button */}
         <button
           onClick={handleClose}
@@ -335,11 +254,7 @@ export function AuthModal() {
             FIN<span className="text-gold-gradient">GOLD</span>
           </span>
           <p className="text-xs text-white/50 mt-1 uppercase tracking-widest">
-            {mode === "register"
-              ? step === 2
-                ? "Verify Email"
-                : "Create Account"
-              : "Access Portfolio"}
+            {step === 1 ? "Sign In / Register" : step === 2 ? "Complete Profile" : "Success"}
           </p>
         </div>
 
@@ -350,334 +265,182 @@ export function AuthModal() {
             <div className="flex-1">
               <p className="font-semibold">Notice</p>
               <p className="mt-0.5 leading-relaxed text-red-200/80">{error}</p>
-              {window.location.hostname === "localhost" && step === 2 && (
-                <p className="mt-1.5 font-semibold text-amber-300">
-                  Tip: Use "123456" as OTP to simulate verification on localhost.
-                </p>
-              )}
             </div>
           </div>
         )}
 
         {/* Step Forms */}
 
-        {/* Step 1: Forms (Register/Login) */}
+        {/* Step 1: Sign in choice */}
         {step === 1 && (
-          <>
-            {mode === "register" ? (
-              /* Unified Registration Form */
-              <form onSubmit={handleRegister} className="space-y-4">
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="name"
-                    className="block text-[11px] font-semibold uppercase tracking-wider text-white/60"
-                  >
-                    Full Name (as in PAN/Aadhaar)
-                  </label>
-                  <div className="relative">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
-                    <input
-                      id="name"
-                      type="text"
-                      placeholder="John Doe"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      disabled={loading}
-                      className="w-full rounded-xl border border-[#D4AF37]/25 bg-black/40 py-3 pl-11 pr-4 text-sm text-white placeholder-white/20 focus:border-[#D4AF37] focus:outline-none transition-colors"
-                      required
-                    />
-                  </div>
-                </div>
+          <div className="space-y-6">
+            <div className="text-center space-y-2">
+              <h3 className="font-display text-xl font-semibold">Join Fingold</h3>
+              <p className="text-xs text-white/60">
+                Sign up or log in instantly using Google to manage your digital gold.
+              </p>
+            </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label
-                      htmlFor="email"
-                      className="block text-[11px] font-semibold uppercase tracking-wider text-white/60"
-                    >
-                      Email Address
-                    </label>
-                    <div className="relative">
-                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
-                      <input
-                        id="email"
-                        type="email"
-                        placeholder="johndoe@example.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        disabled={loading}
-                        className="w-full rounded-xl border border-[#D4AF37]/25 bg-black/40 py-3 pl-11 pr-4 text-sm text-white placeholder-white/20 focus:border-[#D4AF37] focus:outline-none transition-colors"
-                        required
-                      />
-                    </div>
-                  </div>
+            <button
+              onClick={handleGoogleSignIn}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/5 py-4 text-sm font-semibold text-white hover:bg-white/10 transition-colors cursor-pointer disabled:opacity-50"
+            >
+              <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24">
+                <path
+                  fill="#EA4335"
+                  d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.147 4.114-3.41 0-6.177-2.767-6.177-6.177s2.767-6.177 6.177-6.177c1.494 0 2.861.533 3.935 1.41l3.056-3.056C19.141 2.215 15.908 1 12.24 1 5.48 1 0 6.48 0 13.24s5.48 12.24 12.24 12.24c6.76 0 11.76-4.75 11.76-11.76 0-.61-.06-1.17-.18-1.715H12.24Z"
+                />
+              </svg>
+              {loading ? "Redirecting..." : "Continue with Google"}
+            </button>
 
-                  <div className="space-y-1.5">
-                    <label
-                      htmlFor="password"
-                      className="block text-[11px] font-semibold uppercase tracking-wider text-white/60"
-                    >
-                      Password
-                    </label>
-                    <div className="relative">
-                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
-                      <input
-                        id="password"
-                        type="password"
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        disabled={loading}
-                        className="w-full rounded-xl border border-[#D4AF37]/25 bg-black/40 py-3 pl-11 pr-4 text-sm text-white placeholder-white/20 focus:border-[#D4AF37] focus:outline-none transition-colors"
-                        required
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="phone"
-                    className="block text-[11px] font-semibold uppercase tracking-wider text-white/60"
-                  >
-                    Mobile Number
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-white/40">
-                      +91
-                    </span>
-                    <input
-                      id="phone"
-                      type="tel"
-                      placeholder="Enter 10-digit number"
-                      maxLength={10}
-                      value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
-                      disabled={loading}
-                      className="w-full rounded-xl border border-[#D4AF37]/25 bg-black/40 py-3 pl-13 pr-4 text-sm text-white placeholder-white/20 focus:border-[#D4AF37] focus:outline-none transition-colors"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label
-                      htmlFor="dob"
-                      className="block text-[11px] font-semibold uppercase tracking-wider text-white/60"
-                    >
-                      Date of Birth
-                    </label>
-                    <div className="relative">
-                      <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
-                      <input
-                        id="dob"
-                        type="date"
-                        value={dob}
-                        onChange={(e) => setDob(e.target.value)}
-                        disabled={loading}
-                        className="w-full rounded-xl border border-[#D4AF37]/25 bg-black/40 py-3 pl-11 pr-4 text-sm text-white placeholder-white/20 focus:border-[#D4AF37] focus:outline-none transition-colors"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label
-                      htmlFor="gender"
-                      className="block text-[11px] font-semibold uppercase tracking-wider text-white/60"
-                    >
-                      Gender
-                    </label>
-                    <select
-                      id="gender"
-                      value={gender}
-                      onChange={(e) => setGender(e.target.value)}
-                      disabled={loading}
-                      className="w-full rounded-xl border border-[#D4AF37]/25 bg-black/40 py-3 px-4 text-sm text-white focus:border-[#D4AF37] focus:outline-none transition-colors cursor-pointer"
-                      required
-                    >
-                      <option value="" disabled className="bg-[#1A1A1A]">
-                        Select
-                      </option>
-                      <option value="male" className="bg-[#1A1A1A]">
-                        Male
-                      </option>
-                      <option value="female" className="bg-[#1A1A1A]">
-                        Female
-                      </option>
-                      <option value="other" className="bg-[#1A1A1A]">
-                        Other
-                      </option>
-                    </select>
-                  </div>
-                </div>
-
+            {/* Developer simulation (Localhost only) */}
+            {window.location.hostname === "localhost" && (
+              <div className="pt-2">
                 <button
-                  type="submit"
-                  disabled={loading}
-                  className="btn-gold btn-gold-hover w-full rounded-xl py-3.5 text-sm font-bold flex items-center justify-center gap-2 cursor-pointer mt-4 disabled:opacity-50"
+                  type="button"
+                  onClick={handleSimulateGoogleSignIn}
+                  className="w-full flex items-center justify-center gap-2 rounded-2xl border border-[#D4AF37]/30 bg-[#D4AF37]/5 py-3 text-xs font-bold text-[#D4AF37] hover:bg-[#D4AF37]/15 transition-all cursor-pointer"
                 >
-                  {loading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      Register & Verify Email <ChevronRight className="h-4 w-4" />
-                    </>
-                  )}
+                  Developer Google Simulation 🛠️
                 </button>
-
-                <div className="pt-4 text-center">
-                  <button
-                    type="button"
-                    onClick={() => setMode("login")}
-                    className="text-xs text-[#D4AF37] hover:text-[#F4D03F] transition-colors font-medium underline decoration-[#D4AF37]/30"
-                  >
-                    Existing user? Log in here
-                  </button>
-                </div>
-              </form>
-            ) : (
-              /* Email / Password Login Form */
-              <form onSubmit={handleLogin} className="space-y-5">
-                <div className="space-y-2">
-                  <label
-                    htmlFor="email"
-                    className="block text-xs font-semibold uppercase tracking-wider text-white/70"
-                  >
-                    Email Address
-                  </label>
-                  <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
-                    <input
-                      id="email"
-                      type="email"
-                      placeholder="johndoe@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      disabled={loading}
-                      className="w-full rounded-2xl border border-[#D4AF37]/25 bg-black/40 py-3.5 pl-11 pr-4 text-sm text-white placeholder-white/20 focus:border-[#D4AF37] focus:outline-none transition-colors"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label
-                    htmlFor="password"
-                    className="block text-xs font-semibold uppercase tracking-wider text-white/70"
-                  >
-                    Password
-                  </label>
-                  <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
-                    <input
-                      id="password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      disabled={loading}
-                      className="w-full rounded-2xl border border-[#D4AF37]/25 bg-black/40 py-3.5 pl-11 pr-4 text-sm text-white placeholder-white/20 focus:border-[#D4AF37] focus:outline-none transition-colors"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="btn-gold btn-gold-hover w-full rounded-2xl py-3.5 text-sm font-bold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  {loading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      Log In to Portfolio <ChevronRight className="h-4 w-4" />
-                    </>
-                  )}
-                </button>
-
-                <div className="pt-4 text-center">
-                  <button
-                    type="button"
-                    onClick={() => setMode("register")}
-                    className="text-xs text-[#D4AF37] hover:text-[#F4D03F] transition-colors font-medium underline decoration-[#D4AF37]/30"
-                  >
-                    New investor? Register here
-                  </button>
-                </div>
-              </form>
+              </div>
             )}
-          </>
+          </div>
         )}
 
-        {/* Step 2: Email Verification Link & Code Entry */}
+        {/* Step 2: Complete Profile */}
         {step === 2 && (
-          <form onSubmit={handleVerifyEmail} className="space-y-5">
-            <div className="space-y-4">
-              {/* Verification link info */}
-              <div className="rounded-2xl bg-[#D4AF37]/10 border border-[#D4AF37]/20 p-4 text-xs text-amber-200 space-y-1.5">
-                <p className="font-semibold text-[#D4AF37]">Verification Link Sent</p>
-                <p className="leading-relaxed text-white/80">
-                  We have sent a verification link to{" "}
-                  <strong className="text-white">{email}</strong>. Please check your inbox (and spam
-                  folder) and click the link to confirm your account.
-                </p>
-                <p className="text-[11px] text-[#D4AF37]/80 italic">
-                  Once clicked, this screen will update and log you in automatically.
-                </p>
-              </div>
+          <form onSubmit={handleSaveProfile} className="space-y-4 animate-reveal">
+            <div className="text-center mb-2">
+              <h3 className="font-display text-lg font-semibold">Verify & Complete Profile</h3>
+              <p className="text-xs text-white/50">
+                Please provide your details to activate your gold investment profile.
+              </p>
+            </div>
 
-              <div className="relative flex py-1 items-center">
-                <div className="flex-grow border-t border-white/10"></div>
-                <span className="flex-shrink mx-4 text-[10px] text-white/40 uppercase font-semibold">
-                  Or enter code
+            <div className="space-y-1.5">
+              <label
+                htmlFor="name"
+                className="block text-[11px] font-semibold uppercase tracking-wider text-white/60"
+              >
+                Full Name (as in PAN/Aadhaar)
+              </label>
+              <input
+                id="name"
+                type="text"
+                placeholder="John Doe"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                disabled={loading}
+                className="w-full rounded-xl border border-[#D4AF37]/25 bg-black/40 py-3 px-4 text-sm text-white placeholder-white/20 focus:border-[#D4AF37] focus:outline-none transition-colors"
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label
+                htmlFor="email"
+                className="block text-[11px] font-semibold uppercase tracking-wider text-white/60"
+              >
+                Email Address
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                disabled
+                className="w-full rounded-xl border border-white/5 bg-white/5 py-3 px-4 text-sm text-white/50 focus:outline-none"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label
+                htmlFor="phone"
+                className="block text-[11px] font-semibold uppercase tracking-wider text-white/60"
+              >
+                Mobile Number
+              </label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-white/40">
+                  +91
                 </span>
-                <div className="flex-grow border-t border-white/10"></div>
+                <input
+                  id="phone"
+                  type="tel"
+                  placeholder="Enter 10-digit number"
+                  maxLength={10}
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
+                  disabled={loading}
+                  className="w-full rounded-xl border border-[#D4AF37]/25 bg-black/40 py-3 pl-13 pr-4 text-sm text-white placeholder-white/20 focus:border-[#D4AF37] focus:outline-none transition-colors"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="dob"
+                  className="block text-[11px] font-semibold uppercase tracking-wider text-white/60"
+                >
+                  Date of Birth
+                </label>
+                <input
+                  id="dob"
+                  type="date"
+                  value={dob}
+                  onChange={(e) => setDob(e.target.value)}
+                  disabled={loading}
+                  className="w-full rounded-xl border border-[#D4AF37]/25 bg-black/40 py-3 px-4 text-sm text-white focus:border-[#D4AF37] focus:outline-none transition-colors"
+                  required
+                />
               </div>
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label
-                    htmlFor="emailOtp"
-                    className="block text-xs font-semibold uppercase tracking-wider text-white/70"
-                  >
-                    6-Digit Verification Code
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setStep(1)}
-                    className="text-xs text-white/40 hover:text-white transition-colors"
-                  >
-                    Back to Form
-                  </button>
-                </div>
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
-                  <input
-                    id="emailOtp"
-                    type="text"
-                    maxLength={6}
-                    placeholder="Enter 6-digit code"
-                    value={emailOtp}
-                    onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, ""))}
-                    disabled={loading}
-                    className="w-full rounded-2xl border border-[#D4AF37]/25 bg-black/40 py-3.5 pl-11 pr-4 text-sm text-white placeholder-white/20 focus:border-[#D4AF37] focus:outline-none transition-colors"
-                  />
-                </div>
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="gender"
+                  className="block text-[11px] font-semibold uppercase tracking-wider text-white/60"
+                >
+                  Gender
+                </label>
+                <select
+                  id="gender"
+                  value={gender}
+                  onChange={(e) => setGender(e.target.value)}
+                  disabled={loading}
+                  className="w-full rounded-xl border border-[#D4AF37]/25 bg-black/40 py-3 px-4 text-sm text-white focus:border-[#D4AF37] focus:outline-none transition-colors cursor-pointer"
+                  required
+                >
+                  <option value="" disabled className="bg-[#1A1A1A]">
+                    Select
+                  </option>
+                  <option value="male" className="bg-[#1A1A1A]">
+                    Male
+                  </option>
+                  <option value="female" className="bg-[#1A1A1A]">
+                    Female
+                  </option>
+                  <option value="other" className="bg-[#1A1A1A]">
+                    Other
+                  </option>
+                </select>
               </div>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="btn-gold btn-gold-hover w-full rounded-2xl py-3.5 text-sm font-bold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              className="btn-gold btn-gold-hover w-full rounded-xl py-3.5 text-sm font-bold flex items-center justify-center gap-2 cursor-pointer mt-4 disabled:opacity-50"
             >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                "Verify Code & Complete Registration"
+                <>
+                  Save & Complete Onboarding <ChevronRight className="h-4 w-4" />
+                </>
               )}
             </button>
           </form>
@@ -685,16 +448,15 @@ export function AuthModal() {
 
         {/* Step 3: Success Screen */}
         {step === 3 && (
-          <div className="text-center space-y-6 py-4">
+          <div className="text-center space-y-6 py-4 animate-reveal">
             <div className="flex justify-center">
               <CheckCircle2 className="h-16 w-16 text-[#D4AF37] animate-bounce" />
             </div>
             <div className="space-y-2">
               <h3 className="font-display text-2xl text-white">Success!</h3>
               <p className="text-sm text-white/60 leading-relaxed">
-                {mode === "register"
-                  ? "Your Fingold investment account has been set up successfully. Welcome to the future of gold investing."
-                  : "You have successfully logged in to your Fingold portfolio dashboard."}
+                Your Fingold investment account has been set up successfully. Welcome to the future
+                of gold investing.
               </p>
             </div>
             <button
