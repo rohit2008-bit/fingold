@@ -1,6 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { Menu, X } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { User } from "@supabase/supabase-js";
+import { toast } from "sonner";
 
 import { triggerAuthModal } from "../../lib/utils";
 
@@ -15,6 +18,41 @@ const links = [
 
 export function Nav() {
   const [isOpen, setIsOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    // Get initial session
+    const getInitialSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      setUser(session?.user || null);
+    };
+    getInitialSession();
+
+    // Listen for changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user || null);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      toast.success("Successfully logged out");
+      window.location.reload(); // Refresh to update layouts
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error("Logout failed: " + msg);
+    }
+  };
 
   return (
     <header className="fixed top-0 inset-x-0 z-50 print:hidden">
@@ -46,20 +84,37 @@ export function Nav() {
             ))}
           </ul>
 
-          <div className="hidden md:flex items-center gap-4">
-            <button
-              onClick={() => triggerAuthModal("login")}
-              className="text-sm font-semibold text-foreground/75 hover:text-foreground transition-colors cursor-pointer"
-            >
-              Log In
-            </button>
-            <button
-              onClick={() => triggerAuthModal("register")}
-              className="btn-gold btn-gold-hover rounded-full px-5 py-2.5 text-sm font-semibold cursor-pointer"
-            >
-              Start Investing
-            </button>
-          </div>
+          {user ? (
+            <div className="hidden md:flex items-center gap-4">
+              <Link
+                to="/prd"
+                className="btn-gold btn-gold-hover rounded-full px-5 py-2.5 text-sm font-semibold cursor-pointer"
+              >
+                Go to PRD
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="text-sm font-semibold text-foreground/75 hover:text-foreground transition-colors cursor-pointer"
+              >
+                Log Out
+              </button>
+            </div>
+          ) : (
+            <div className="hidden md:flex items-center gap-4">
+              <button
+                onClick={() => triggerAuthModal("login")}
+                className="text-sm font-semibold text-foreground/75 hover:text-foreground transition-colors cursor-pointer"
+              >
+                Log In
+              </button>
+              <button
+                onClick={() => triggerAuthModal("register")}
+                className="btn-gold btn-gold-hover rounded-full px-5 py-2.5 text-sm font-semibold cursor-pointer"
+              >
+                Start Investing
+              </button>
+            </div>
+          )}
 
           {/* Mobile Menu Button */}
           <button
@@ -86,26 +141,47 @@ export function Nav() {
                   </a>
                 </li>
               ))}
-              <li className="pt-4 border-t border-border/40 flex flex-col gap-3">
-                <button
-                  onClick={() => {
-                    setIsOpen(false);
-                    triggerAuthModal("login");
-                  }}
-                  className="w-full py-3 text-sm font-semibold text-center border border-border/40 rounded-2xl cursor-pointer hover:bg-white/10"
-                >
-                  Log In
-                </button>
-                <button
-                  onClick={() => {
-                    setIsOpen(false);
-                    triggerAuthModal("register");
-                  }}
-                  className="btn-gold btn-gold-hover rounded-2xl w-full py-3 text-sm font-semibold flex items-center justify-center cursor-pointer"
-                >
-                  Start Investing
-                </button>
-              </li>
+              {user ? (
+                <li className="pt-4 border-t border-border/40 flex flex-col gap-3">
+                  <Link
+                    to="/prd"
+                    onClick={() => setIsOpen(false)}
+                    className="btn-gold btn-gold-hover rounded-2xl w-full py-3 text-sm font-semibold flex items-center justify-center cursor-pointer"
+                  >
+                    Go to PRD
+                  </Link>
+                  <button
+                    onClick={() => {
+                      setIsOpen(false);
+                      handleLogout();
+                    }}
+                    className="w-full py-3 text-sm font-semibold text-center border border-border/40 rounded-2xl cursor-pointer hover:bg-white/10"
+                  >
+                    Log Out
+                  </button>
+                </li>
+              ) : (
+                <li className="pt-4 border-t border-border/40 flex flex-col gap-3">
+                  <button
+                    onClick={() => {
+                      setIsOpen(false);
+                      triggerAuthModal("login");
+                    }}
+                    className="w-full py-3 text-sm font-semibold text-center border border-border/40 rounded-2xl cursor-pointer hover:bg-white/10"
+                  >
+                    Log In
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsOpen(false);
+                      triggerAuthModal("register");
+                    }}
+                    className="btn-gold btn-gold-hover rounded-2xl w-full py-3 text-sm font-semibold flex items-center justify-center cursor-pointer"
+                  >
+                    Start Investing
+                  </button>
+                </li>
+              )}
             </ul>
           </div>
         )}
