@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SovereignGoldBondsGuideRouteImport } from './routes/sovereign-gold-bonds-guide'
 import { Route as SipCalculatorRouteImport } from './routes/sip-calculator'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PrdRouteImport } from './routes/prd'
 import { Route as LumpsumCalculatorRouteImport } from './routes/lumpsum-calculator'
 import { Route as GoldTaxationRouteImport } from './routes/gold-taxation'
@@ -30,6 +31,11 @@ const SovereignGoldBondsGuideRoute = SovereignGoldBondsGuideRouteImport.update({
 const SipCalculatorRoute = SipCalculatorRouteImport.update({
   id: '/sip-calculator',
   path: '/sip-calculator',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrdRoute = PrdRouteImport.update({
@@ -92,6 +98,7 @@ export interface FileRoutesByFullPath {
   '/gold-taxation': typeof GoldTaxationRoute
   '/lumpsum-calculator': typeof LumpsumCalculatorRoute
   '/prd': typeof PrdRoute
+  '/profile': typeof ProfileRoute
   '/sip-calculator': typeof SipCalculatorRoute
   '/sovereign-gold-bonds-guide': typeof SovereignGoldBondsGuideRoute
   '/tools/future-value': typeof ToolsFutureValueRoute
@@ -106,6 +113,7 @@ export interface FileRoutesByTo {
   '/gold-taxation': typeof GoldTaxationRoute
   '/lumpsum-calculator': typeof LumpsumCalculatorRoute
   '/prd': typeof PrdRoute
+  '/profile': typeof ProfileRoute
   '/sip-calculator': typeof SipCalculatorRoute
   '/sovereign-gold-bonds-guide': typeof SovereignGoldBondsGuideRoute
   '/tools/future-value': typeof ToolsFutureValueRoute
@@ -121,6 +129,7 @@ export interface FileRoutesById {
   '/gold-taxation': typeof GoldTaxationRoute
   '/lumpsum-calculator': typeof LumpsumCalculatorRoute
   '/prd': typeof PrdRoute
+  '/profile': typeof ProfileRoute
   '/sip-calculator': typeof SipCalculatorRoute
   '/sovereign-gold-bonds-guide': typeof SovereignGoldBondsGuideRoute
   '/tools/future-value': typeof ToolsFutureValueRoute
@@ -137,6 +146,7 @@ export interface FileRouteTypes {
     | '/gold-taxation'
     | '/lumpsum-calculator'
     | '/prd'
+    | '/profile'
     | '/sip-calculator'
     | '/sovereign-gold-bonds-guide'
     | '/tools/future-value'
@@ -151,6 +161,7 @@ export interface FileRouteTypes {
     | '/gold-taxation'
     | '/lumpsum-calculator'
     | '/prd'
+    | '/profile'
     | '/sip-calculator'
     | '/sovereign-gold-bonds-guide'
     | '/tools/future-value'
@@ -165,6 +176,7 @@ export interface FileRouteTypes {
     | '/gold-taxation'
     | '/lumpsum-calculator'
     | '/prd'
+    | '/profile'
     | '/sip-calculator'
     | '/sovereign-gold-bonds-guide'
     | '/tools/future-value'
@@ -180,6 +192,7 @@ export interface RootRouteChildren {
   GoldTaxationRoute: typeof GoldTaxationRoute
   LumpsumCalculatorRoute: typeof LumpsumCalculatorRoute
   PrdRoute: typeof PrdRoute
+  ProfileRoute: typeof ProfileRoute
   SipCalculatorRoute: typeof SipCalculatorRoute
   SovereignGoldBondsGuideRoute: typeof SovereignGoldBondsGuideRoute
   ToolsFutureValueRoute: typeof ToolsFutureValueRoute
@@ -200,6 +213,13 @@ declare module '@tanstack/react-router' {
       path: '/sip-calculator'
       fullPath: '/sip-calculator'
       preLoaderRoute: typeof SipCalculatorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/prd': {
@@ -284,6 +304,7 @@ const rootRouteChildren: RootRouteChildren = {
   GoldTaxationRoute: GoldTaxationRoute,
   LumpsumCalculatorRoute: LumpsumCalculatorRoute,
   PrdRoute: PrdRoute,
+  ProfileRoute: ProfileRoute,
   SipCalculatorRoute: SipCalculatorRoute,
   SovereignGoldBondsGuideRoute: SovereignGoldBondsGuideRoute,
   ToolsFutureValueRoute: ToolsFutureValueRoute,

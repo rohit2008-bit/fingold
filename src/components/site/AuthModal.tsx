@@ -3,123 +3,332 @@ import {
   X,
   User,
   Calendar,
-  Phone,
   CheckCircle2,
   ChevronRight,
   AlertCircle,
   Loader2,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  Briefcase,
+  MapPin,
+  Calendar as CalendarIcon,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Calendar as CalendarUI } from "@/components/ui/calendar";
+
+// Mapping of popular Indian cities to their states for auto-population
+const cityToStateMap: Record<string, string> = {
+  mumbai: "Maharashtra",
+  pune: "Maharashtra",
+  nagpur: "Maharashtra",
+  thane: "Maharashtra",
+  nashik: "Maharashtra",
+  "navi mumbai": "Maharashtra",
+  aurangabad: "Maharashtra",
+  kolhapur: "Maharashtra",
+  solapur: "Maharashtra",
+  jalgaon: "Maharashtra",
+  amravati: "Maharashtra",
+  nanded: "Maharashtra",
+  
+  adipur: "Gujarat",
+  gandhidham: "Gujarat",
+  ahmedabad: "Gujarat",
+  surat: "Gujarat",
+  vadodara: "Gujarat",
+  rajkot: "Gujarat",
+  jamnagar: "Gujarat",
+  bhavnagar: "Gujarat",
+  bhuj: "Gujarat",
+  anand: "Gujarat",
+  navsari: "Gujarat",
+  morbi: "Gujarat",
+  mehsana: "Gujarat",
+  junagadh: "Gujarat",
+  gandhinagar: "Gujarat",
+  vapi: "Gujarat",
+  porbandar: "Gujarat",
+  
+  delhi: "Delhi",
+  "new delhi": "Delhi",
+  noida: "Uttar Pradesh",
+  ghaziabad: "Uttar Pradesh",
+  gurugram: "Haryana",
+  gurgaon: "Haryana",
+  faridabad: "Haryana",
+  
+  bengaluru: "Karnataka",
+  bangalore: "Karnataka",
+  mysore: "Karnataka",
+  mangalore: "Karnataka",
+  hubli: "Karnataka",
+  belgaum: "Karnataka",
+  
+  chennai: "Tamil Nadu",
+  coimbatore: "Tamil Nadu",
+  madurai: "Tamil Nadu",
+  trichy: "Tamil Nadu",
+  salem: "Tamil Nadu",
+  tirunelveli: "Tamil Nadu",
+  
+  hyderabad: "Telangana",
+  warangal: "Telangana",
+  
+  kolkata: "West Bengal",
+  howrah: "West Bengal",
+  darjeeling: "West Bengal",
+  siliguri: "West Bengal",
+  
+  jaipur: "Rajasthan",
+  jodhpur: "Rajasthan",
+  udaipur: "Rajasthan",
+  kota: "Rajasthan",
+  ajmer: "Rajasthan",
+  bikaner: "Rajasthan",
+  alwar: "Rajasthan",
+  
+  lucknow: "Uttar Pradesh",
+  kanpur: "Uttar Pradesh",
+  agra: "Uttar Pradesh",
+  varanasi: "Uttar Pradesh",
+  meerut: "Uttar Pradesh",
+  prayagraj: "Uttar Pradesh",
+  allahabad: "Uttar Pradesh",
+  bareilly: "Uttar Pradesh",
+  aligarh: "Uttar Pradesh",
+  gorakhpur: "Uttar Pradesh",
+  
+  patna: "Bihar",
+  gaya: "Bihar",
+  bhagalpur: "Bihar",
+  muzaffarpur: "Bihar",
+  
+  bhopal: "Madhya Pradesh",
+  indore: "Madhya Pradesh",
+  gwalior: "Madhya Pradesh",
+  jabalpur: "Madhya Pradesh",
+  ujjain: "Madhya Pradesh",
+  
+  chandigarh: "Chandigarh",
+  
+  amritsar: "Punjab",
+  ludhiana: "Punjab",
+  jalandhar: "Punjab",
+  patiala: "Punjab",
+  
+  kochi: "Kerala",
+  trivandrum: "Kerala",
+  kozhikode: "Kerala",
+  thrissur: "Kerala",
+  kollam: "Kerala",
+  
+  panaji: "Goa",
+  margao: "Goa",
+  
+  dehradun: "Uttarakhand",
+  haridwar: "Uttarakhand",
+  
+  shimla: "Himachal Pradesh",
+  
+  ranchi: "Jharkhand",
+  jamshedpur: "Jharkhand",
+  dhanbad: "Jharkhand",
+  
+  raipur: "Chhattisgarh",
+  bilaspur: "Chhattisgarh",
+  
+  bhubaneswar: "Odisha",
+  cuttack: "Odisha",
+  rourkela: "Odisha",
+  
+  guwahati: "Assam",
+};
 
 export function AuthModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [mode, setMode] = useState<"authenticate" | "profile">("authenticate");
 
   // Flow steps:
-  // 1: OAuth Authentication Choice (Google Sign-In)
+  // 1: OAuth Authentication Choice / Email Form
   // 2: Complete Profile Form
   // 3: Success Screen
   const [step, setStep] = useState<1 | 2 | 3>(1);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isSimulated, setIsSimulated] = useState(false);
+
+  // Auth Mode: signin vs signup
+  const [authSubMode, setAuthSubMode] = useState<"signin" | "signup">("signin");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   // Form values for step 2 (Profile Form)
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
   const [dob, setDob] = useState("");
   const [gender, setGender] = useState("");
-
-  const checkProfileCompleteness = async (user: {
-    id: string;
-    email?: string;
-    user_metadata?: { full_name?: string };
-  }) => {
-    try {
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-
-      if (profileError && profileError.code !== "PGRST116") {
-        console.error("Error fetching profile:", profileError);
-        return;
-      }
-
-      // If profile doesn't exist or is missing required fields: name, date_of_birth, gender, or phone
-      if (
-        !profile ||
-        !profile.name ||
-        !profile.date_of_birth ||
-        !profile.gender ||
-        !profile.phone
-      ) {
-        setName(profile?.name || user.user_metadata?.full_name || "");
-        setEmail(profile?.email || user.email || "");
-        setPhoneNumber(profile?.phone?.replace("+91", "") || "");
-        setDob(profile?.date_of_birth || "");
-        setGender(profile?.gender || "");
-
-        // Transition directly to the Profile Form step
-        setMode("profile");
-        setStep(2);
-        setIsOpen(true);
-      }
-    } catch (err) {
-      console.error("Error checking profile completeness:", err);
-    }
-  };
+  const [profession, setProfession] = useState("");
+  const [city, setCity] = useState("");
+  const [stateVal, setStateVal] = useState("");
 
   useEffect(() => {
-    // Initial check if there's already a logged in user
-    const checkUser = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (session?.user) {
-        await checkProfileCompleteness(session.user);
-      }
-    };
-    checkUser();
-
-    // Listen to custom "open-auth" events triggered by buttons
+    // Listen to custom "open-auth" and "edit-profile" events triggered by buttons
     const handleOpen = async (e: Event) => {
       const {
         data: { session },
       } = await supabase.auth.getSession();
+      
+      const forceEdit = e.type === "edit-profile";
+      const customEvent = e as CustomEvent;
+      const eventMode = customEvent.detail?.mode; // "login" | "register"
+
       if (session?.user) {
-        await checkProfileCompleteness(session.user);
+        if (forceEdit) {
+          let dbProfile: any = null;
+          try {
+            const { data } = await supabase
+              .from("profiles")
+              .select("*")
+              .eq("id", session.user.id)
+              .single();
+            dbProfile = data;
+          } catch (e) {}
+
+          const userMeta = session.user.user_metadata || {};
+          setName(dbProfile?.name || userMeta.name || userMeta.full_name || "");
+          setEmail(dbProfile?.email || session.user.email || "");
+          setDob(dbProfile?.date_of_birth || userMeta.date_of_birth || "");
+          setGender(dbProfile?.gender || userMeta.gender || "");
+          setProfession(dbProfile?.profession || userMeta.profession || "");
+          setCity(dbProfile?.city || userMeta.city || "");
+          setStateVal(dbProfile?.state || userMeta.state || "");
+
+          setMode("profile");
+          setStep(2);
+          setIsOpen(true);
+        }
       } else {
         setMode("authenticate");
         setStep(1);
         setError(null);
-        setIsSimulated(false);
         setName("");
         setEmail("");
-        setPhoneNumber("");
+        setPassword("");
         setDob("");
         setGender("");
+        setProfession("");
+        setCity("");
+        setStateVal("");
+        
+        if (eventMode === "login") {
+          setAuthSubMode("signin");
+        } else if (eventMode === "register") {
+          setAuthSubMode("signup");
+        } else {
+          setAuthSubMode("signin"); // default fallback
+        }
+        
         setIsOpen(true);
       }
     };
 
     window.addEventListener("open-auth", handleOpen);
+    window.addEventListener("edit-profile", handleOpen);
 
-    // Listen for auth state changes (e.g. user clicked Google redirect link)
+    return () => {
+      window.removeEventListener("open-auth", handleOpen);
+      window.removeEventListener("edit-profile", handleOpen);
+    };
+  }, []);
+
+  useEffect(() => {
+    const checkSessionAndProfile = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session?.user) {
+        const userMeta = session.user.user_metadata || {};
+        const hasMetadata = 
+          userMeta.gender && 
+          (userMeta.date_of_birth || userMeta.dob) && 
+          userMeta.city && 
+          userMeta.state;
+
+        if (hasMetadata) {
+          return;
+        }
+
+        try {
+          const { data: dbProfile } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", session.user.id)
+            .single();
+
+          const hasDbProfile = 
+            dbProfile && 
+            dbProfile.gender && 
+            (dbProfile.date_of_birth || dbProfile.dob || dbProfile.date_of_birth === "") && 
+            dbProfile.city && 
+            dbProfile.state;
+
+          if (hasDbProfile) {
+            return;
+          }
+        } catch (dbErr) {
+          console.log("No profile row found or check failed:", dbErr);
+        }
+
+        // Profile is incomplete. Trigger Step 2 onboarding modal.
+        setName(userMeta.name || userMeta.full_name || "");
+        setEmail(session.user.email || "");
+        setMode("profile");
+        setStep(2);
+        setIsOpen(true);
+      }
+    };
+
+    checkSessionAndProfile();
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        await checkProfileCompleteness(session.user);
+      if (event === "SIGNED_IN" && session?.user) {
+        const userMeta = session.user.user_metadata || {};
+        const hasMetadata = 
+          userMeta.gender && 
+          (userMeta.date_of_birth || userMeta.dob) && 
+          userMeta.city && 
+          userMeta.state;
+
+        if (hasMetadata) return;
+
+        try {
+          const { data: dbProfile } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", session.user.id)
+            .single();
+
+          if (dbProfile?.gender && dbProfile?.city && dbProfile?.state) {
+            return;
+          }
+        } catch (e) {}
+
+        setName(userMeta.name || userMeta.full_name || "");
+        setEmail(session.user.email || "");
+        setMode("profile");
+        setStep(2);
+        setIsOpen(true);
       }
     });
 
     return () => {
-      window.removeEventListener("open-auth", handleOpen);
       subscription.unsubscribe();
     };
   }, []);
@@ -136,7 +345,7 @@ export function AuthModal() {
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: "http://localhost:5173",
+          redirectTo: window.location.origin,
         },
       });
 
@@ -151,24 +360,45 @@ export function AuthModal() {
     }
   };
 
-  // Developer simulation handler (For testing onboarding flow on localhost)
-  const handleSimulateGoogleSignIn = () => {
-    setIsSimulated(true);
-    setName("John Doe");
-    setEmail("johndoe@gmail.com");
-    setPhoneNumber("9876543210");
-    setDob("1995-01-01");
-    setGender("male");
+  // Email/Password sign in or register handler
+  const handleEmailAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) {
+      setError("Please fill in all fields.");
+      return;
+    }
 
-    toast.success("Simulation session created as John Doe");
-    setMode("profile");
-    setStep(2);
+    if (authSubMode === "signup") {
+      // In register mode, transition to Step 2 (profile details) first
+      setError(null);
+      setStep(2);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (authError) throw authError;
+      toast.success("Signed in successfully!");
+      setIsOpen(false);
+      window.location.href = "/";
+    } catch (err: unknown) {
+      console.error("Email Auth Error:", err);
+      const errMessage = err instanceof Error ? err.message : String(err);
+      setError(errMessage || "Authentication failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Profile Save handler
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email || !dob || !gender || !phoneNumber) {
+    if (!name || !email || !dob || !gender || !profession || !city || !stateVal) {
       setError("All fields are required.");
       return;
     }
@@ -176,34 +406,114 @@ export function AuthModal() {
     setLoading(true);
     setError(null);
 
-    try {
-      if (isSimulated) {
-        toast.success("[Simulated] Profile saved successfully!");
-        setStep(3); // Success
+    // City and State mismatch validation
+    const normalizedCity = city.trim().toLowerCase();
+    const expectedState = cityToStateMap[normalizedCity];
+    if (expectedState && stateVal.trim().toLowerCase() !== expectedState.toLowerCase()) {
+      setError(`The city "${city}" is located in ${expectedState}. Please correct the state.`);
+      setLoading(false);
+      return;
+    }
+
+    // Age validation check (must be at least 18 years old)
+    if (dob) {
+      const birthDate = new Date(dob);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      if (age < 18) {
+        setError("You must be at least 18 years old to register.");
+        setLoading(false);
         return;
       }
+    }
 
+    try {
       const {
         data: { session },
       } = await supabase.auth.getSession();
+
       if (!session?.user) {
-        throw new Error("No active session found. Please sign in again.");
+        // Registration Sign Up flow
+        const { data, error: authError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              name,
+              gender,
+              date_of_birth: dob,
+              profession,
+              city,
+              state: stateVal,
+            },
+          },
+        });
+
+        if (authError) throw authError;
+
+        if (data.session) {
+          toast.success("Registered and profile completed successfully!");
+          setStep(3); // Success
+        } else {
+          toast.success("Registration successful! Please check your email for a verification link.");
+          setStep(3); // Success (Show success screen anyway instead of closing modal)
+        }
+        return;
       }
 
-      // Update user profile details in database
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({
+      // Existing User (Signed In/OAuth/Edit flow)
+      // 1. Save to Supabase User Metadata (always works)
+      const { error: metaError } = await supabase.auth.updateUser({
+        data: {
           name,
           date_of_birth: dob,
           gender,
-          phone: `+91${phoneNumber}`,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", session.user.id);
+          profession,
+          city,
+          state: stateVal,
+        },
+      });
+      if (metaError) throw metaError;
 
-      if (profileError) {
-        throw profileError;
+      // 2. Try saving to profiles table.
+      try {
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .update({
+            name,
+            date_of_birth: dob,
+            gender,
+            profession,
+            city,
+            state: stateVal,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", session.user.id);
+
+        if (profileError) {
+          // If columns profession/city/state do not exist (error 42703), fall back to only saving name/dob/gender
+          if (profileError.code === "42703") {
+            const { error: fallbackError } = await supabase
+              .from("profiles")
+              .update({
+                name,
+                date_of_birth: dob,
+                gender,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", session.user.id);
+
+            if (fallbackError) throw fallbackError;
+          } else {
+            throw profileError;
+          }
+        }
+      } catch (dbErr) {
+        console.warn("DB profiles update failed, falling back to auth metadata:", dbErr);
       }
 
       toast.success("Profile saved successfully!");
@@ -219,7 +529,28 @@ export function AuthModal() {
 
   const handleFinish = () => {
     setIsOpen(false);
-    window.location.reload(); // Refresh to update Nav states, header, etc.
+    window.location.href = "/";
+  };
+
+  const handleCityChange = (val: string) => {
+    setCity(val);
+    const normalizedCity = val.trim().toLowerCase();
+    if (cityToStateMap[normalizedCity]) {
+      setStateVal(cityToStateMap[normalizedCity]);
+    }
+  };
+
+  const parsedDob = dob ? new Date(dob) : undefined;
+
+  const handleSelectDob = (date: Date | undefined) => {
+    if (date) {
+      const yyyy = date.getFullYear();
+      const mm = String(date.getMonth() + 1).padStart(2, "0");
+      const dd = String(date.getDate()).padStart(2, "0");
+      setDob(`${yyyy}-${mm}-${dd}`);
+    } else {
+      setDob("");
+    }
   };
 
   if (!isOpen) return null;
@@ -254,7 +585,7 @@ export function AuthModal() {
             FIN<span className="text-gold-gradient">GOLD</span>
           </span>
           <p className="text-xs text-white/50 mt-1 uppercase tracking-widest">
-            {step === 1 ? "Sign In / Register" : step === 2 ? "Complete Profile" : "Success"}
+            {step === 1 ? (authSubMode === "signin" ? "Sign In" : "Register") : step === 2 ? "Complete Profile" : "Success"}
           </p>
         </div>
 
@@ -273,15 +604,126 @@ export function AuthModal() {
 
         {/* Step 1: Sign in choice */}
         {step === 1 && (
-          <div className="space-y-6">
-            <div className="text-center space-y-2">
-              <h3 className="font-display text-xl font-semibold">Join Fingold</h3>
-              <p className="text-xs text-white/60">
-                Sign up or log in instantly using Google to manage your digital gold.
+          <div className="space-y-5">
+            {/* Tab Selector */}
+            <div className="flex rounded-xl bg-black/40 p-1 border border-white/5">
+              <button
+                type="button"
+                onClick={() => setAuthSubMode("signin")}
+                className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all cursor-pointer ${
+                  authSubMode === "signin"
+                    ? "bg-[#D4AF37] text-[#1B1B1B] shadow-md"
+                    : "text-white/60 hover:text-white"
+                }`}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => setAuthSubMode("signup")}
+                className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all cursor-pointer ${
+                  authSubMode === "signup"
+                    ? "bg-[#D4AF37] text-[#1B1B1B] shadow-md"
+                    : "text-white/60 hover:text-white"
+                }`}
+              >
+                Register
+              </button>
+            </div>
+
+            <div className="text-center space-y-1">
+              <h3 className="font-display text-lg font-semibold">
+                {authSubMode === "signin" ? "Welcome Back" : "Create Account"}
+              </h3>
+              <p className="text-xs text-white/50">
+                {authSubMode === "signin"
+                  ? "Sign in to manage your digital gold assets."
+                  : "Start your digital gold investment journey today."}
               </p>
             </div>
 
+            <form onSubmit={handleEmailAuth} className="space-y-3.5">
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="auth-email"
+                  className="block text-[11px] font-semibold uppercase tracking-wider text-white/60"
+                >
+                  Email Address
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40">
+                    <Mail className="h-4 w-4" />
+                  </span>
+                  <input
+                    id="auth-email"
+                    type="email"
+                    placeholder="name@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={loading}
+                    className="w-full rounded-xl border border-[#D4AF37]/25 bg-black/40 py-3 pl-11 pr-4 text-sm text-white placeholder-white/20 focus:border-[#D4AF37] focus:outline-none transition-colors"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="auth-password"
+                  className="block text-[11px] font-semibold uppercase tracking-wider text-white/60"
+                >
+                  Password
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40">
+                    <Lock className="h-4 w-4" />
+                  </span>
+                  <input
+                    id="auth-password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={loading}
+                    className="w-full rounded-xl border border-[#D4AF37]/25 bg-black/40 py-3 pl-11 pr-11 text-sm text-white placeholder-white/20 focus:border-[#D4AF37] focus:outline-none transition-colors"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-gold btn-gold-hover w-full rounded-xl py-3.5 text-sm font-bold flex items-center justify-center gap-2 cursor-pointer mt-2 disabled:opacity-50"
+              >
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : authSubMode === "signin" ? (
+                  "Sign In"
+                ) : (
+                  "Create Account"
+                )}
+              </button>
+            </form>
+
+            <div className="relative flex items-center justify-center py-2">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-white/10" />
+              </div>
+              <span className="relative px-3 bg-[#1e150b] text-[10px] uppercase tracking-wider text-white/40">
+                or continue with
+              </span>
+            </div>
+
             <button
+              type="button"
               onClick={handleGoogleSignIn}
               disabled={loading}
               className="w-full flex items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/5 py-4 text-sm font-semibold text-white hover:bg-white/10 transition-colors cursor-pointer disabled:opacity-50"
@@ -294,19 +736,6 @@ export function AuthModal() {
               </svg>
               {loading ? "Redirecting..." : "Continue with Google"}
             </button>
-
-            {/* Developer simulation (Localhost only) */}
-            {window.location.hostname === "localhost" && (
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={handleSimulateGoogleSignIn}
-                  className="w-full flex items-center justify-center gap-2 rounded-2xl border border-[#D4AF37]/30 bg-[#D4AF37]/5 py-3 text-xs font-bold text-[#D4AF37] hover:bg-[#D4AF37]/15 transition-all cursor-pointer"
-                >
-                  Developer Google Simulation 🛠️
-                </button>
-              </div>
-            )}
           </div>
         )}
 
@@ -325,80 +754,26 @@ export function AuthModal() {
                 htmlFor="name"
                 className="block text-[11px] font-semibold uppercase tracking-wider text-white/60"
               >
-                Full Name (as in PAN/Aadhaar)
-              </label>
-              <input
-                id="name"
-                type="text"
-                placeholder="John Doe"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                disabled={loading}
-                className="w-full rounded-xl border border-[#D4AF37]/25 bg-black/40 py-3 px-4 text-sm text-white placeholder-white/20 focus:border-[#D4AF37] focus:outline-none transition-colors"
-                required
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label
-                htmlFor="email"
-                className="block text-[11px] font-semibold uppercase tracking-wider text-white/60"
-              >
-                Email Address
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                disabled
-                className="w-full rounded-xl border border-white/5 bg-white/5 py-3 px-4 text-sm text-white/50 focus:outline-none"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label
-                htmlFor="phone"
-                className="block text-[11px] font-semibold uppercase tracking-wider text-white/60"
-              >
-                Mobile Number
+                Full Name
               </label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-white/40">
-                  +91
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40">
+                  <User className="h-4 w-4" />
                 </span>
                 <input
-                  id="phone"
-                  type="tel"
-                  placeholder="Enter 10-digit number"
-                  maxLength={10}
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
+                  id="name"
+                  type="text"
+                  placeholder="John Doe"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                   disabled={loading}
-                  className="w-full rounded-xl border border-[#D4AF37]/25 bg-black/40 py-3 pl-13 pr-4 text-sm text-white placeholder-white/20 focus:border-[#D4AF37] focus:outline-none transition-colors"
+                  className="w-full rounded-xl border border-[#D4AF37]/25 bg-black/40 py-3 pl-11 pr-4 text-sm text-white placeholder-white/20 focus:border-[#D4AF37] focus:outline-none transition-colors"
                   required
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label
-                  htmlFor="dob"
-                  className="block text-[11px] font-semibold uppercase tracking-wider text-white/60"
-                >
-                  Date of Birth
-                </label>
-                <input
-                  id="dob"
-                  type="date"
-                  value={dob}
-                  onChange={(e) => setDob(e.target.value)}
-                  disabled={loading}
-                  className="w-full rounded-xl border border-[#D4AF37]/25 bg-black/40 py-3 px-4 text-sm text-white focus:border-[#D4AF37] focus:outline-none transition-colors"
-                  required
-                />
-              </div>
-
               <div className="space-y-1.5">
                 <label
                   htmlFor="gender"
@@ -427,6 +802,114 @@ export function AuthModal() {
                     Other
                   </option>
                 </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="dob"
+                  className="block text-[11px] font-semibold uppercase tracking-wider text-white/60"
+                >
+                  Date of Birth
+                </label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      disabled={loading}
+                      className="w-full rounded-xl border border-[#D4AF37]/25 bg-black/40 py-3 pl-11 pr-4 text-sm text-white focus:border-[#D4AF37] focus:outline-none transition-colors text-left flex items-center justify-between cursor-pointer relative"
+                    >
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none">
+                        <CalendarIcon className="h-4 w-4" />
+                      </span>
+                      <span>{dob ? dob : "Select Date"}</span>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 bg-[#1e150b] border border-[#D4AF37]/30 text-white z-[200]">
+                    <CalendarUI
+                      mode="single"
+                      selected={parsedDob}
+                      onSelect={handleSelectDob}
+                      disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                      initialFocus
+                      captionLayout="dropdown"
+                      className="bg-[#1e150b] text-white border-0"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label
+                htmlFor="profession"
+                className="block text-[11px] font-semibold uppercase tracking-wider text-white/60"
+              >
+                Profession
+              </label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40">
+                  <Briefcase className="h-4 w-4" />
+                </span>
+                <input
+                  id="profession"
+                  type="text"
+                  placeholder="e.g. Software Engineer, Business Owner"
+                  value={profession}
+                  onChange={(e) => setProfession(e.target.value)}
+                  disabled={loading}
+                  className="w-full rounded-xl border border-[#D4AF37]/25 bg-black/40 py-3 pl-11 pr-4 text-sm text-white placeholder-white/20 focus:border-[#D4AF37] focus:outline-none transition-colors"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="city"
+                  className="block text-[11px] font-semibold uppercase tracking-wider text-white/60"
+                >
+                  City
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40">
+                    <MapPin className="h-4 w-4" />
+                  </span>
+                  <input
+                    id="city"
+                    type="text"
+                    placeholder="e.g. Mumbai"
+                    value={city}
+                    onChange={(e) => handleCityChange(e.target.value)}
+                    disabled={loading}
+                    className="w-full rounded-xl border border-[#D4AF37]/25 bg-black/40 py-3 pl-11 pr-4 text-sm text-white placeholder-white/20 focus:border-[#D4AF37] focus:outline-none transition-colors"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="state"
+                  className="block text-[11px] font-semibold uppercase tracking-wider text-white/60"
+                >
+                  State
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40">
+                    <MapPin className="h-4 w-4" />
+                  </span>
+                  <input
+                    id="state"
+                    type="text"
+                    placeholder="e.g. Maharashtra"
+                    value={stateVal}
+                    onChange={(e) => setStateVal(e.target.value)}
+                    disabled={loading}
+                    className="w-full rounded-xl border border-[#D4AF37]/25 bg-black/40 py-3 pl-11 pr-4 text-sm text-white placeholder-white/20 focus:border-[#D4AF37] focus:outline-none transition-colors"
+                    required
+                  />
+                </div>
               </div>
             </div>
 

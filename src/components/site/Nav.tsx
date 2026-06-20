@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
-import { Menu, X } from "lucide-react";
+import { Menu, X, User as UserIcon } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { User } from "@supabase/supabase-js";
 import { toast } from "sonner";
@@ -87,17 +87,12 @@ export function Nav() {
           {user ? (
             <div className="hidden md:flex items-center gap-4">
               <Link
-                to="/prd"
-                className="btn-gold btn-gold-hover rounded-full px-5 py-2.5 text-sm font-semibold cursor-pointer"
+                to="/profile"
+                className="flex items-center justify-center h-10 w-10 rounded-full border border-[#D4AF37]/30 bg-[#D4AF37]/10 hover:bg-[#D4AF37]/20 text-[#D4AF37] hover:text-[#F4D03F] transition-all cursor-pointer"
+                title="View Profile"
               >
-                Go to PRD
+                <UserIcon className="h-5 w-5" />
               </Link>
-              <button
-                onClick={handleLogout}
-                className="text-sm font-semibold text-foreground/75 hover:text-foreground transition-colors cursor-pointer"
-              >
-                Log Out
-              </button>
             </div>
           ) : (
             <div className="hidden md:flex items-center gap-4">
@@ -144,21 +139,12 @@ export function Nav() {
               {user ? (
                 <li className="pt-4 border-t border-border/40 flex flex-col gap-3">
                   <Link
-                    to="/prd"
+                    to="/profile"
                     onClick={() => setIsOpen(false)}
-                    className="btn-gold btn-gold-hover rounded-2xl w-full py-3 text-sm font-semibold flex items-center justify-center cursor-pointer"
+                    className="btn-gold btn-gold-hover rounded-2xl w-full py-3 text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    Go to PRD
+                    <UserIcon className="h-4 w-4" /> View Profile
                   </Link>
-                  <button
-                    onClick={() => {
-                      setIsOpen(false);
-                      handleLogout();
-                    }}
-                    className="w-full py-3 text-sm font-semibold text-center border border-border/40 rounded-2xl cursor-pointer hover:bg-white/10"
-                  >
-                    Log Out
-                  </button>
                 </li>
               ) : (
                 <li className="pt-4 border-t border-border/40 flex flex-col gap-3">
